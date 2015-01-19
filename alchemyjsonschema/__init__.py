@@ -406,7 +406,7 @@ class SchemaFactory(object):
                     suboverrides = self.child_factory.child_overrides(prop, overrides)
                     value = self.child_factory.child_schema(prop, self, root_schema, subwalker, suboverrides, depth=depth, history=history)
                     self._add_property_with_reference(walker, root_schema, D, prop, value)
-                    history.pop()
+                    # history.pop()   # this produces an infinite loop
                 elif action == FOREIGNKEY:  # ColumnProperty
                     for c in prop.columns:
                         sub = {}
