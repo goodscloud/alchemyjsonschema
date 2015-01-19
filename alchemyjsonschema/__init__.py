@@ -358,7 +358,7 @@ class SchemaFactory(object):
             raise InvalidStatus("invalid overrides: {}".format(overrides.not_used_keys))
 
         if model.__doc__:
-            schema["description"] = model.__doc__
+            schema["description"] = self._clean_doc(model.__doc__)
 
         required = self._detect_required(walker)
 
@@ -416,7 +416,7 @@ class SchemaFactory(object):
                             self._add_restriction_if_found(sub, c, itype)
 
                             if c.doc:
-                                sub["description"] = c.doc
+                                sub["description"] = self._clean_doc(c.doc)
 
                             if c.name in overrides:
                                 overrides.overrides(sub)
@@ -437,3 +437,6 @@ class SchemaFactory(object):
             if any(not c.nullable and c.default is None for c in columns):
                 r.append(prop.key)
         return r
+
+    def _clean_doc(self, doc):
+        return " ".join([d.strip() for d in doc.split()])
