@@ -61,7 +61,7 @@ default_column_to_schema = {
     t.Binary: "xxx",
     t.Boolean: "boolean",
     t.Unicode: "string",
-    t.Concatenable: "xxx",
+    t.Concatenable: "array",
     t.UnicodeText: "string",
     t.Interval: "xxx",
     t.Enum: "string",
