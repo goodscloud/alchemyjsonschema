@@ -104,6 +104,9 @@ class Classifier(object):
         self.mapping = mapping
 
     def __getitem__(self, k):
+        if isinstance(k, t.TypeDecorator):
+            k = k.impl
+
         cls = k.__class__
         v = self.mapping.get(cls)
         if v is not None:
