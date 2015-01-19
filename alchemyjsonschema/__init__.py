@@ -3,7 +3,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 from collections import OrderedDict
+
 import sqlalchemy.types as t
+import sqlalchemy.dialects.postgresql as pgt
+
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm.properties import ColumnProperty
 from sqlalchemy.orm.relationships import RelationshipProperty
@@ -41,6 +44,9 @@ JSON Schema defines seven primitive types for JSON values:
 
 #  tentative
 default_column_to_schema = {
+    pgt.JSON: "object",
+    pgt.UUID: "string",
+
     t.String: "string",
     t.Text: "string",
     t.Integer: "integer",
@@ -103,9 +109,10 @@ class Classifier(object):
         if v is not None:
             return cls, v
         # inheritance
-        for type_ in self.mapping:
-            if issubclass(cls, type_):
-                return type_, self.mapping[type_]
+        for sc in cls.mro():
+            if sc in self.mapping:
+                return sc, self.mapping[sc]
+
         raise InvalidStatus("notfound: {k}".format(k=k))
 
 DefaultClassfier = Classifier(default_column_to_schema)
