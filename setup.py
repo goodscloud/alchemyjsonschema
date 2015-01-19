@@ -26,7 +26,7 @@ docs_extras = [
     ]
 
 tests_require =[
-    "pytest", 
+    "pytest",
     "webob"
 ]
 testing_extras = tests_require + [
@@ -45,7 +45,7 @@ class PyTest(TestCommand):
 
 
 setup(name='alchemyjsonschema',
-      version='0.2.1.1',
+      version='0.2.2',
       description='mappeing jsonschema for sqlalchemy models',
       long_description=README + '\n\n' +  CHANGES,
       classifiers=[
