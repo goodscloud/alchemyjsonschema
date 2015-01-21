@@ -378,6 +378,13 @@ class SchemaFactory(object):
 
         return JSONSchema(name=model.__mapper__.class_._tablename, schema=schema)
 
+    def get_schema(self, model, includes=None, excludes=None, overrides=None):
+        """
+        Generates a schema for a given model.
+        """
+        return self.__call__(model, includes=includes, excludes=excludes, overrides=overrides)
+
+
     def _add_restriction_if_found(self, D, column, itype):
         for tcls in itype.__mro__:
             if tcls is TypeEngine:
