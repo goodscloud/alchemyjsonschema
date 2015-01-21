@@ -51,19 +51,19 @@ default_column_to_schema = {
     t.Text: "string",
     t.Integer: "integer",
     t.SmallInteger: "integer",
-    t.BigInteger: "string",  # xxx
+    t.BigInteger: "string",
     t.Numeric: "integer",
     t.Float: "number",
     t.DateTime: "string",
     t.Date: "string",
-    t.Time: "string",  # xxx
-    t.LargeBinary: "xxx",
-    t.Binary: "xxx",
+    t.Time: "string",
+    t.LargeBinary: "xxxLargeBinary",
+    t.Binary: "xxxBinary",
     t.Boolean: "boolean",
     t.Unicode: "string",
     t.Concatenable: "array",
     t.UnicodeText: "string",
-    t.Interval: "xxx",
+    t.Interval: "xxxInterval",
     t.Enum: "string",
 }
 
