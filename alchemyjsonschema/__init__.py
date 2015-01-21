@@ -422,7 +422,7 @@ class SchemaFactory(object):
         if depth is not None and depth <= 0:
             return self.container_factory()
 
-        D = self.container_factory()
+        prop_schema = self.container_factory()
         if history is None:
             history = []
 
@@ -432,8 +432,9 @@ class SchemaFactory(object):
                     history.append(prop)
                     subwalker = self.child_factory.child_walker(prop, walker, history=history)
                     suboverrides = self.child_factory.child_overrides(prop, overrides)
-                    value = self.child_factory.child_schema(prop, self, root_schema, subwalker, suboverrides, depth=depth, history=history)
-                    self._add_property_with_reference(walker, root_schema, D, prop, value)
+                    value = self.child_factory.child_schema(prop, self, root_schema, subwalker,
+                                                            suboverrides, depth=depth, history=history)
+                    self._add_property_with_reference(walker, root_schema, prop_schema, prop, value)
                     # history.pop()   # this produces an infinite loop
                 elif action == FOREIGNKEY:  # ColumnProperty
                     for c in prop.columns:
@@ -450,13 +451,13 @@ class SchemaFactory(object):
                                 overrides.overrides(sub)
                             if opts:
                                 sub.update(opts)
-                            D[c.name] = sub
+                            prop_schema[c.name] = sub
                         else:
                             raise NotImplemented
-                    D[prop.key] = sub
+                    prop_schema[prop.key] = sub
                 else:  # immediate
-                    D[prop.key] = action
-        return D
+                    prop_schema[prop.key] = action
+        return prop_schema
 
     def _detect_required(self, walker):
         r = []
