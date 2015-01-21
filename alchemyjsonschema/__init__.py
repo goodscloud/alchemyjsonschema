@@ -375,7 +375,8 @@ class SchemaFactory(object):
 
         if required:
             schema["required"] = required
-        return schema
+
+        return JSONSchema(name=model.__mapper__.class_._tablename, schema=schema)
 
     def _add_restriction_if_found(self, D, column, itype):
         for tcls in itype.__mro__:
