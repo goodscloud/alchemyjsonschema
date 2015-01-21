@@ -68,6 +68,15 @@ default_column_to_schema = {
 }
 
 
+class JSONSchema(object):
+    """
+    Helper class to hold the name and schema
+    """
+    def __init__(self, name, schema):
+        self.name = name
+        self.schema = schema
+
+
 # restriction
 def string_max_length(column, sub):
     if column.type.length is not None:
@@ -336,13 +345,15 @@ class SchemaFactory(object):
                  restriction_dict=default_restriction_dict,
                  container_factory=OrderedDict,
                  child_factory=ChildFactory("."),
-                 relation_decision=RelationDesicion()):
+                 relation_decision=RelationDesicion(),
+                 reference_files=False):
         self.container_factory = container_factory
         self.classifier = classifier
         self.walker = walker  # class
         self.restriction_dict = restriction_dict
         self.child_factory = child_factory
         self.relation_decision = relation_decision
+        self.reference_files = reference_files
 
     def __call__(self, model, includes=None, excludes=None, overrides=None, depth=None):
         walker = self.walker(model, includes=includes, excludes=excludes)
@@ -355,7 +366,7 @@ class SchemaFactory(object):
         schema["properties"] = self._build_properties(walker, schema, overrides=overrides, depth=depth)
 
         if overrides.not_used_keys:
-            raise InvalidStatus("invalid overrides: {}".format(overrides.not_used_keys))
+            raise InvalidStatus("Invalid overrides: {}".format(overrides.not_used_keys))
 
         if model.__doc__:
             schema["description"] = self._clean_doc(model.__doc__)
@@ -376,17 +387,26 @@ class SchemaFactory(object):
 
     def _add_property_with_reference(self, walker, root_schema, current_schema, prop, val):
         clsname = prop.mapper.class_.__name__
-        if "definitions" not in root_schema:
-            root_schema["definitions"] = {}
-
-        if val["type"] == "object":
-            current_schema[prop.key] = {"$ref": "#/definitions/{}".format(clsname)}
-            val["required"] = self._detect_required(walker)
-            root_schema["definitions"][clsname] = val
-        else:  # array
-            current_schema[prop.key] = {"type": "array", "items": {"$ref": "#/definitions/{}".format(clsname)}}
+        if self.reference_files:
+            if prop.direction.name == 'MANYTOONE':
+                current_schema[prop.key] = {"$ref": "{prop}.json#/{prop}".format(prop=prop.table.name)}
+            elif val["type"] == "object":
+                current_schema[prop.key] = {"$ref": "{prop}.json#/{prop}".format(prop=prop.key)}
+            else:
+                current_schema[prop.key] = {"type": "array", "items": {"$ref": "{prop}.json#/{prop}".format(prop=prop.key)}}
             val["type"] = "object"
-            val["properties"] = val.pop("items")
+            val["required"] = self._detect_required(walker)
+        else:
+            if "definitions" not in root_schema:
+                root_schema["definitions"] = {}
+
+            if val["type"] == "object":
+                current_schema[prop.key] = {"$ref": "#/definitions/{}".format(clsname)}
+            else:  # array
+                current_schema[prop.key] = {"type": "array", "items": {"$ref": "#/definitions/{}".format(clsname)}}
+                val["type"] = "object"
+                val["properties"] = val.pop("items")
+
             val["required"] = self._detect_required(walker)
             root_schema["definitions"][clsname] = val
 
