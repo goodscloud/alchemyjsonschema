@@ -360,6 +360,7 @@ class SchemaFactory(object):
         overrides = CollectionForOverrides(overrides or {})
 
         schema = {
+            "$schema": "http://json-schema.org/draft-04/schema#",
             "title": model.__name__,
             "type": "object",
         }
@@ -386,7 +387,7 @@ class SchemaFactory(object):
 
 
     def _add_restriction_if_found(self, D, column, itype):
-        for tcls in itype.__mro__:
+        for tcls in itype.mro():
             if tcls is TypeEngine:
                 break
             fn = self.restriction_dict.get(tcls)
@@ -394,20 +395,24 @@ class SchemaFactory(object):
                 fn(column, D)
 
     def _add_property_with_reference(self, walker, root_schema, current_schema, prop, val):
-        clsname = prop.mapper.class_.__name__
+        """
+        When referencing a definition in an external file, reference exactly the filename and add a
+        `pound` sybol at the end, meaning `root of the document`
+
+        When referencing a definition inside the same file, it goes into the `definitions` key, so
+        reference as `#/definitions/NAME`.
+        """
         if self.reference_files:
-            if prop.direction.name == 'MANYTOONE':
-                current_schema[prop.key] = {"$ref": "{prop}.json#/{prop}".format(prop=prop.table.name)}
-            elif val["type"] == "object":
-                current_schema[prop.key] = {"$ref": "{prop}.json#/{prop}".format(prop=prop.key)}
+            name = prop.mapper.mapped_table.name
+            if prop.direction.name in ("MANYTOONE", "MANYTOMANY") or val["type"] == "array":
+                current_schema[prop.key] = {"type": "array", "items": {"$ref": "{name}.json#".format(name=name)}}
             else:
-                current_schema[prop.key] = {"type": "array", "items": {"$ref": "{prop}.json#/{prop}".format(prop=prop.key)}}
-            val["type"] = "object"
-            val["required"] = self._detect_required(walker)
+                current_schema[prop.key] = {"$ref": "{name}.json#".format(name=name)}
         else:
             if "definitions" not in root_schema:
                 root_schema["definitions"] = {}
 
+            clsname = prop.mapper.class_.__name__
             if val["type"] == "object":
                 current_schema[prop.key] = {"$ref": "#/definitions/{}".format(clsname)}
             else:  # array
@@ -415,8 +420,11 @@ class SchemaFactory(object):
                 val["type"] = "object"
                 val["properties"] = val.pop("items")
 
-            val["required"] = self._detect_required(walker)
+            # remember the definition at `definitions` level
             root_schema["definitions"][clsname] = val
+
+        # make sure `required` is detected for all values
+        val["required"] = self._detect_required(walker)
 
     def _build_properties(self, walker, root_schema, overrides, depth=None, history=None, toplevel=True):
         if depth is not None and depth <= 0:
@@ -436,22 +444,33 @@ class SchemaFactory(object):
                                                             suboverrides, depth=depth, history=history)
                     self._add_property_with_reference(walker, root_schema, prop_schema, prop, value)
                     # history.pop()   # this produces an infinite loop
+
                 elif action == FOREIGNKEY:  # ColumnProperty
-                    for c in prop.columns:
+                    # when could this have more than one column?
+                    for column in prop.columns:
                         sub = {}
-                        if type(c.type) != VisitableType:
-                            itype, sub["type"] = self.classifier[c.type]
+                        if type(column.type) != VisitableType:
+                            itype, sub["type"] = self.classifier[column.type]
 
-                            self._add_restriction_if_found(sub, c, itype)
+                            if sub["type"] == "array":
+                                if hasattr(column.type, "item_type"):
+                                    item_type, item_type_str = self.classifier[column.type.item_type]
+                                    sub["items"] = {"type": "{}".format(item_type_str)}
+                                    if item_type_str == "string":
+                                        length = column.type.item_type.length
+                                        if length > 0:
+                                            sub["items"].update({"maxLength": "{}".format(length)})
 
-                            if c.doc:
-                                sub["description"] = self._clean_doc(c.doc)
+                            self._add_restriction_if_found(sub, column, itype)
 
-                            if c.name in overrides:
+                            if column.doc:
+                                sub["description"] = self._clean_doc(column.doc)
+
+                            if column.name in overrides:
                                 overrides.overrides(sub)
                             if opts:
                                 sub.update(opts)
-                            prop_schema[c.name] = sub
+                            prop_schema[column.name] = sub
                         else:
                             raise NotImplemented
                     prop_schema[prop.key] = sub
