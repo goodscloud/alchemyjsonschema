@@ -51,7 +51,7 @@ def detect_decision(x):
 def run(model, walker, depth=None, relation_decision=None):
     make_schema = SchemaFactory(walker, relation_decision=relation_decision)
     schema = make_schema(model, depth=depth)
-    print(json.dumps(schema, indent=2, ensure_ascii=False))
+    print(json.dumps(schema.schema, indent=2, ensure_ascii=False))
 
 
 def main(sys_args=sys.argv[1:]):
